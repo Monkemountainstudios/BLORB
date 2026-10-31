@@ -82,3 +82,16 @@ containing both platform packages.
 Click the illuminated **O** in BLORB to open the test/calibration panel. Its
 Factory Reset button restores these spatial defaults without changing the main
 musical controls.
+
+## Credits
+
+- **MonkeMountainStudios** — original concept, creative direction, listening tests,
+  sound design and fearless invention.
+- **Codex (OpenAI)** — DSP and interface implementation, build engineering and
+  release tooling, working under the inventor's direction.
+- **Astra (OpenAI GPT)** — early concept development, interaction design and
+  exploratory technical discussion.
+
+BLORB is an AI-assisted work created through sustained human direction, critical
+listening and iterative engineering. The machines are credited as collaborators;
+the mad inventor remains firmly in charge.
