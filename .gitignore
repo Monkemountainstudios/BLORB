@@ -1,0 +1,7 @@
+/build-*/
+/build/
+/.vs/
+*.user
+*.suo
+.DS_Store
+CMakeUserPresets.json

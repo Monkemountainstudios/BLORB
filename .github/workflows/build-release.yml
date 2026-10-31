@@ -1,0 +1,94 @@
+name: Build and release BLORB
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+
+      - name: Build
+        run: cmake --build build --config Release --target OrbitDspSmoke Orbit_Standalone Orbit_VST3 --parallel 2
+
+      - name: Test DSP
+        run: .\build\OrbitDspSmoke_artefacts\Release\OrbitDspSmoke.exe
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path package, dist -Force | Out-Null
+          Copy-Item -Recurse -LiteralPath build\Orbit_artefacts\Release\VST3\BLORB.vst3 -Destination package
+          Copy-Item -LiteralPath build\Orbit_artefacts\Release\Standalone\BLORB.exe -Destination package
+          Compress-Archive -Path package\* -DestinationPath dist\BLORB-Windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BLORB-Windows-x64
+          path: dist/BLORB-Windows-x64.zip
+
+  macos:
+    name: macOS universal
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >-
+          cmake -S . -B build -G Xcode
+          -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build --config Release --target OrbitDspSmoke Orbit_Standalone Orbit_VST3 --parallel 2
+
+      - name: Test DSP
+        run: ./build/OrbitDspSmoke_artefacts/Release/OrbitDspSmoke
+
+      - name: Package
+        run: |
+          mkdir -p package dist
+          cp -R build/Orbit_artefacts/Release/VST3/BLORB.vst3 package/
+          cp -R build/Orbit_artefacts/Release/Standalone/BLORB.app package/
+          ditto -c -k --sequesterRsrc --keepParent package dist/BLORB-macOS-universal.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BLORB-macOS-universal
+          path: dist/BLORB-macOS-universal.zip
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: BLORB-*
+          path: dist
+          merge-multiple: true
+
+      - name: Create prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}" dist/*.zip
+          --repo "${GITHUB_REPOSITORY}"
+          --title "BLORB ${GITHUB_REF_NAME}"
+          --generate-notes
+          --prerelease
